@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Feed Categorizer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <h1>Feed Categorizer</h1>
+      <button id="btn-ai-suggest" class="btn btn-primary">✨ AI 智能分类</button>
+    </header>
+
+    <!-- 扩展上下文失效提示 -->
+    <div id="context-invalid" class="hidden" style="padding: 20px; margin: 15px; text-align: center; background: #fff3cd; border-radius: 8px;">
+      <p style="margin: 0 0 10px 0; color: #856404; font-weight: 500;">⚠️ 扩展需要重新加载</p>
+      <p style="margin: 0 0 15px 0; font-size: 13px; color: #856404;">请在 <code style="background: #ffeaa7; padding: 2px 6px; border-radius: 4px;">chrome://extensions/</code> 页面刷新此扩展</p>
+      <button onclick="location.reload()" class="btn btn-secondary" style="font-size: 13px;">刷新 popup</button>
+    </div>
+
+    <!-- 分类列表视图 -->
+    <div id="view-categories">
+      <div class="section-header">
+        <span>分类</span>
+        <button id="btn-add-category" class="btn btn-text">+ 新建分类</button>
+      </div>
+      <div id="category-list">
+        <p class="empty-hint">还没有分类<br>点击 "+ 新建分类" 创建你的第一个分类</p>
+      </div>
+    </div>
+
+    <!-- 新建/编辑分类 -->
+    <div id="view-edit-category" class="hidden">
+      <div class="section-header">
+        <button class="btn btn-back btn-back-category">← 返回</button>
+        <span id="edit-category-title">新建分类</span>
+        <span></span>
+      </div>
+      <div class="form-group">
+        <label>分类名称</label>
+        <input type="text" id="input-category-name" placeholder="如：AI / 机器学习" />
+      </div>
+      <div class="form-group">
+        <label>图标 Emoji</label>
+        <input type="text" id="input-category-icon" placeholder="🤖 🚀 💰 🎨" maxlength="2" />
+      </div>
+      <div class="form-group">
+        <label>颜色</label>
+        <div id="color-picker" class="color-picker"></div>
+      </div>
+      <button id="btn-save-category" class="btn btn-primary btn-full">保存分类</button>
+      <button id="btn-delete-category" class="btn btn-danger btn-full hidden">删除分类</button>
+    </div>
+
+    <!-- 分类详情 / 成员管理 -->
+    <div id="view-category-detail" class="hidden">
+      <div class="section-header">
+        <button class="btn btn-back btn-back-detail">← 返回</button>
+        <span id="detail-category-name"></span>
+        <button id="btn-edit-from-detail" class="btn btn-text">编辑</button>
+      </div>
+      <div id="member-list"></div>
+    </div>
+
+    <!-- 主页快捷添加 -->
+    <div id="view-quick-add" class="hidden">
+      <div class="qa-header">
+        <div class="qa-profile">
+          <span id="qa-profile-name" class="qa-name"></span>
+          <span id="qa-profile-path" class="qa-path"></span>
+        </div>
+      </div>
+      <div id="qa-belongs" class="qa-belongs hidden">
+        已添加到：<span></span>
+      </div>
+      <div class="section-header">
+        <span>选择分类</span>
+      </div>
+      <div id="qa-category-list"></div>
+      <div id="qa-skip" class="qa-skip">跳过，进入管理界面 →</div>
+    </div>
+
+    <!-- AI 建议审核 -->
+    <div id="view-ai-review" class="hidden">
+      <div class="section-header">
+        <button class="btn btn-back btn-back-ai">← 返回</button>
+        <span>AI 分类建议</span>
+        <span></span>
+      </div>
+      <div id="ai-status">
+        <div class="loading-spinner"></div>
+        <p id="ai-status-text">正在分析你的关注列表...</p>
+      </div>
+      <div id="ai-suggestions"></div>
+      <button id="btn-confirm-ai" class="btn btn-primary btn-full hidden">确认保存</button>
+    </div>
+  </div>
+
+  <script src="../lib/storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

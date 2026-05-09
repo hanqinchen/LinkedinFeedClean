@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Feed Categorizer - 设计预览</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f5f7;
+      min-height: 100vh;
+      padding: 60px 40px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    h1 {
+      font-size: 36px;
+      font-weight: 700;
+      color: #1d1d1f;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-size: 18px;
+      color: #86868b;
+    }
+
+    .variants-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 40px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .variant-card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.08),
+        0 0 0 0.5px rgba(0, 0, 0, 0.04);
+      transition: all 0.3s ease;
+    }
+
+    .variant-card:hover {
+      transform: translateY(-4px);
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.12),
+        0 0 0 0.5px rgba(0, 0, 0, 0.04);
+    }
+
+    .variant-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .variant-a .variant-badge {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+
+    .variant-b .variant-badge {
+      background: #1d1d1f;
+      color: #fff;
+    }
+
+    .variant-c .variant-badge {
+      background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+      color: #fff;
+    }
+
+    .variant-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1d1d1f;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .variant-desc {
+      font-size: 15px;
+      color: #86868b;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .preview-frame {
+      background: #f5f5f7;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .preview-frame iframe {
+      width: 100%;
+      height: 400px;
+      border: none;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .features-list {
+      list-style: none;
+    }
+
+    .features-list li {
+      padding: 10px 0;
+      font-size: 14px;
+      color: #424245;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .features-list li::before {
+      content: "✓";
+      color: #34c759;
+      font-weight: 700;
+    }
+
+    .recommended {
+      display: inline-block;
+      background: #fff3cd;
+      color: #856404;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+
+    .cta-section {
+      text-align: center;
+      margin-top: 60px;
+      padding: 40px;
+      background: #fff;
+      border-radius: 24px;
+      box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.06),
+        0 0 0 0.5px rgba(0, 0, 0, 0.04);
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1d1d1f;
+      margin-bottom: 16px;
+    }
+
+    .cta-desc {
+      font-size: 16px;
+      color: #86868b;
+      margin-bottom: 24px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: #007AFF;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #0056cc;
+    }
+
+    .btn-secondary {
+      background: #f5f5f7;
+      color: #1d1d1f;
+    }
+
+    .btn-secondary:hover {
+      background: #e8e8ed;
+    }
+
+    @media (max-width: 1200px) {
+      .variants-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>LinkedIn Feed Categorizer</h1>
+    <p class="subtitle">苹果风格 UI/UX 重新设计 · 3 种方案供选择</p>
+  </div>
+
+  <div class="variants-grid">
+    <div class="variant-card variant-a">
+      <span class="variant-badge">变体 A</span>
+      <h2 class="variant-title">Aurora 极光 <span class="recommended">推荐</span></h2>
+      <p class="variant-desc">
+        绚丽渐变主题，紫色调灵感来源 macOS Sonoma 壁纸。磨砂玻璃质感配合流畅动画，现代感十足。
+      </p>
+      <div class="preview-frame">
+        <iframe src="variant-a-aurora.html"></iframe>
+      </div>
+      <ul class="features-list">
+        <li>紫色渐变主题色，辨识度高</li>
+        <li>磨砂玻璃效果（backdrop-filter）</li>
+        <li>彩色圆形分类标识</li>
+        <li>精致阴影与悬浮动画</li>
+        <li>最具个性，跳出 LinkedIn 风格</li>
+      </ul>
+    </div>
+
+    <div class="variant-card variant-b">
+      <span class="variant-badge">变体 B</span>
+      <h2 class="variant-title">Minimalist 极简</h2>
+      <p class="variant-desc">
+        极致简约黑白灰配色，灵感来源 Apple Notes / Reminders。内容优先，无干扰视觉体验。
+      </p>
+      <div class="preview-frame">
+        <iframe src="variant-b-minimal.html"></iframe>
+      </div>
+      <ul class="features-list">
+        <li>黑白灰极简配色，永不过时</li>
+        <li>iOS 系统风格的左侧色条标识</li>
+        <li>大幅留白，呼吸感强</li>
+        <li>粗体文字，清晰信息层级</li>
+        <li>与 LinkedIn 界面完美融合</li>
+      </ul>
+    </div>
+
+    <div class="variant-card variant-c">
+      <span class="variant-badge">变体 C</span>
+      <h2 class="variant-title">Glass 玻璃态</h2>
+      <p class="variant-desc">
+        Vision Pro 风格的深度玻璃质感，多层叠加创造空间感。emoji 图标增加趣味与辨识度。
+      </p>
+      <div class="preview-frame">
+        <iframe src="variant-c-glass.html"></iframe>
+      </div>
+      <ul class="features-list">
+        <li>Vision Pro 玻璃态设计语言</li>
+        <li>柔和背景渐变 + 毛玻璃效果</li>
+        <li>Emoji 图标，生动有趣</li>
+        <li>数字角标显示成员数量</li>
+        <li>未来感十足，科技属性强</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="cta-section">
+    <h3 class="cta-title">选择你喜欢的设计方案</h3>
+    <p class="cta-desc">
+      点击预览可以查看完整效果。选择一个方案后，我将把它应用到实际的扩展代码中。
+      你也可以提出混合方案（如 A 的配色 + C 的图标）。
+    </p>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="window.open('variant-a-aurora.html', '_blank')">查看变体 A 完整效果</button>
+      <button class="btn btn-primary" onclick="window.open('variant-b-minimal.html', '_blank')">查看变体 B 完整效果</button>
+      <button class="btn btn-primary" onclick="window.open('variant-c-glass.html', '_blank')">查看变体 C 完整效果</button>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+[2026-05-07T07:22:13.948Z] [warning] <link rel=preload> must have a valid `as` value
+[2026-05-07T07:22:13.948Z] [warning] <link rel=preload> must have a valid `as` value
+[2026-05-07T07:22:13.948Z] [warning] <link rel=preload> must have a valid `as` value
+[2026-05-07T07:22:13.948Z] [warning] <link rel=preload> must have a valid `as` value
+[2026-05-07T07:22:13.948Z] [warning] <link rel=preload> must have a valid `as` value
+[2026-05-07T07:22:13.948Z] [warning] <link rel=preload> must have a valid `as` value
+[2026-05-07T07:22:15.621Z] [warning] [GSI_LOGGER]: Your client application may not display the Google One Tap in its default position. When FedCM becomes mandatory, One Tap only displays in the default position. Refer to the migration guide to update your code accordingly and opt-in to FedCM to test your changes. Learn more: https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#layout
+[2026-05-07T07:22:15.637Z] [warning] [GSI_LOGGER]: Your client application uses one of the Google One Tap prompt UI status methods that may stop functioning when FedCM becomes mandatory. Refer to the migration guide to update your code accordingly and opt-in to FedCM to test your changes. Learn more: https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#display_moment and https://developers.google.com/identity/gsi/web/guides/fedcm-migration?s=dc#skipped_moment
+[2026-05-07T07:22:15.637Z] [warning] [GSI_LOGGER]: Currently, you disable FedCM on Google One Tap. FedCM for One Tap will become mandatory starting Oct 2024, and you won’t be able to disable it. Refer to the migration guide to update your code accordingly to ensure users will not be blocked from logging in. Learn more: https://developers.google.com/identity/gsi/web/guides/fedcm-migration
+[2026-05-07T07:22:15.968Z] [log] %c EvalError
+    at oH (https://client.protechts.net/PXdOjV695v/main.min.js:2:66926)
+    at qJ (https://client.protechts.net/PXdOjV695v/main.min.js:2:75334)
+    at JZ (https://client.protechts.net/PXdOjV695v/main.min.js:2:225139)
+    at JX (https://client.protechts.net/PXdOjV695v/main.min.js:2:224762)
+    at https://client.protechts.net/PXdOjV695v/main.min.js:2:226480
+    at https://client.protechts.net/PXdOjV695v/main.min.js:2:226486
+    at https://client.protechts.net/PXdOjV695v/main.min.js:2:226951
+[2026-05-07T07:22:16.807Z] [debug] External tag load event sent successfully: 
+[2026-05-07T07:22:16.835Z] [debug] TMS load event sent successfully: 

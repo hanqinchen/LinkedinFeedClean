@@ -1,0 +1,6 @@
+{"ts":"2026-05-07T07:22:02.383Z","cmd":"snapshot","args":"-i -a -o /tmp/linkedin-search.png","origin":"about:blank","durationMs":102,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-05-07T07:22:06.361Z","cmd":"url","args":"","origin":"about:blank","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-05-07T07:22:06.521Z","cmd":"text","args":"","origin":"about:blank","durationMs":8,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-05-07T07:22:14.651Z","cmd":"goto","args":"https://www.linkedin.com/search/results/content/?keywords=test --wait-until networkidle","origin":"https://www.linkedin.com/uas/login?session_redirect=%2Fsearch%2Fresults%2Fcontent%2F%3Fkeywords%3Dtest&skipRedirect=true","durationMs":2503,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-05-07T07:22:22.179Z","cmd":"url","args":"","origin":"https://www.linkedin.com/uas/login?session_redirect=%2Fsearch%2Fresults%2Fcontent%2F%3Fkeywords%3Dtest&skipRedirect=true","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-05-07T07:22:23.038Z","cmd":"console","args":"--errors","origin":"https://www.linkedin.com/uas/login?session_redirect=%2Fsearch%2Fresults%2Fcontent%2F%3Fkeywords%3Dtest&skipRedirect=true","durationMs":3,"status":"ok","hasCookies":false,"mode":"launched"}

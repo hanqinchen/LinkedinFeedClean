@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>设计变体 A - Aurora 极光</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .title {
+      color: #fff;
+      font-size: 24px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* Popup 预览 */
+    .popup-preview {
+      width: 380px;
+      height: 520px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 20px;
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .popup-header {
+      padding: 20px 20px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .popup-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #1d1d1f;
+      letter-spacing: -0.4px;
+    }
+
+    .btn-ai {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-ai:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+    }
+
+    .btn-ai:active {
+      transform: translateY(0);
+    }
+
+    .section-header {
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #86868b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-new {
+      background: rgba(102, 126, 234, 0.1);
+      color: #667eea;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-new:hover {
+      background: rgba(102, 126, 234, 0.15);
+    }
+
+    .category-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 16px;
+    }
+
+    .category-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #fff;
+      border-radius: 14px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .category-item:hover {
+      transform: translateX(2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .category-color {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .category-info {
+      flex: 1;
+    }
+
+    .category-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1d1d1f;
+      letter-spacing: -0.3px;
+    }
+
+    .category-count {
+      font-size: 13px;
+      color: #86868b;
+      margin-top: 2px;
+    }
+
+    .category-arrow {
+      color: #c7c7cc;
+      font-size: 14px;
+    }
+
+    /* 标签栏预览 */
+    .filter-bar-preview {
+      width: 600px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 16px;
+      padding: 12px 16px;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(0, 0, 0, 0.06);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-tab {
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: #6e6e73;
+      border-radius: 12px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .filter-tab:hover {
+      background: rgba(0, 0, 0, 0.04);
+      color: #1d1d1f;
+    }
+
+    .filter-tab.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .filter-manage {
+      margin-left: auto;
+      color: #86868b;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .variant-label {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body>
+  <div class="variant-label">变体 A - Aurora 极光</div>
+
+  <div>
+    <div class="title">Popup 弹窗</div>
+    <div class="subtitle">380 × 520px</div>
+  </div>
+
+  <div class="popup-preview">
+    <div class="popup-header">
+      <div class="popup-title">Feed Categorizer</div>
+      <button class="btn-ai">✨ AI 智能分类</button>
+    </div>
+
+    <div class="section-header">
+      <span class="section-title">分类</span>
+      <button class="btn-new">+ 新建</button>
+    </div>
+
+    <div class="category-list">
+      <div class="category-item">
+        <div class="category-color" style="background: linear-gradient(135deg, #667eea, #764ba2)">AI</div>
+        <div class="category-info">
+          <div class="category-name">AI / 机器学习</div>
+          <div class="category-count">12 位成员</div>
+        </div>
+        <span class="category-arrow">›</span>
+      </div>
+
+      <div class="category-item">
+        <div class="category-color" style="background: linear-gradient(135deg, #f093fb, #f5576c)">创业</div>
+        <div class="category-info">
+          <div class="category-name">创业者</div>
+          <div class="category-count">8 位成员</div>
+        </div>
+        <span class="category-arrow">›</span>
+      </div>
+
+      <div class="category-item">
+        <div class="category-color" style="background: linear-gradient(135deg, #4facfe, #00f2fe)">投资</div>
+        <div class="category-info">
+          <div class="category-name">投资人</div>
+          <div class="category-count">5 位成员</div>
+        </div>
+        <span class="category-arrow">›</span>
+      </div>
+
+      <div class="category-item">
+        <div class="category-color" style="background: linear-gradient(135deg, #43e97b, #38f9d7)">设计</div>
+        <div class="category-info">
+          <div class="category-name">设计师</div>
+          <div class="category-count">6 位成员</div>
+        </div>
+        <span class="category-arrow">›</span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="title">信息流标签栏</div>
+    <div class="subtitle">注入 LinkedIn 页面顶部</div>
+  </div>
+
+  <div class="filter-bar-preview">
+    <button class="filter-tab active">全部</button>
+    <button class="filter-tab">AI / 机器学习</button>
+    <button class="filter-tab">创业者</button>
+    <button class="filter-tab">投资人</button>
+    <button class="filter-tab">设计师</button>
+    <button class="filter-tab filter-manage">⚙️ 管理</button>
+  </div>
+</body>
+</html>
