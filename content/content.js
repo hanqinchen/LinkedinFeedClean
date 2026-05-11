@@ -958,27 +958,14 @@
 
       const cat = categories.find(c => String(c.id) === catId);
       if (!cat) return;
-
-      const membersWithoutId = (cat.members || []).filter(m => needsProfileVisit(m));
-      if (membersWithoutId.length > 0) {
-        alert(`${membersWithoutId.length} member(s) in this category need ID extraction. You'll be navigated to their profiles automatically for data collection, then redirected to search results.`);
-        await Storage.saveSettings({
-          ...settings,
-          pendingCategoryId: catId,
-          pendingStartTime: Date.now(),
-          pendingExtractIndex: 0
-        });
-        window.location.href = `https://www.linkedin.com${membersWithoutId[0].profilePath}`;
-        return;
-      }
-
-      const urls = buildCategorySearchUrls(cat);
-      if (urls.length > 0) {
-        window.location.href = urls[0];
-        if (urls.length > 1) {
-          window.open(urls[1], '_blank');
-        }
-      }
+      activeCategory = catId;
+      const nextSettings = { ...settings, activeCategory: catId };
+      delete nextSettings.pendingCategoryId;
+      delete nextSettings.pendingStartTime;
+      delete nextSettings.pendingExtractIndex;
+      await Storage.saveSettings(nextSettings);
+      renderTabs();
+      applyFilter();
     });
     return tab;
   }
@@ -1668,9 +1655,8 @@
         return;  // 不处理：可能是 LinkedIn 的 sentinel/spinner，保持原样
       }
 
-      const isMember = filterCat.members.some(m =>
-        typeof m.profilePath === 'string' && m.profilePath === authorPath
-      );
+      const authorId = extractLinkedinIdFromPost(post);
+      const isMember = filterCat.members.some(m => memberMatches(m, authorPath, authorId));
 
       if (isMember) {
         post.style.display = '';
