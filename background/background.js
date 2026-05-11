@@ -102,6 +102,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ ok: true });
     return false;
   }
+  if (message.type === 'openPopup') {
+    chrome.action.openPopup().catch(() => {});
+    return false;
+  }
 });
 
 // Service Worker 激活时重新建立右键菜单

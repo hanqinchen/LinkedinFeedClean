@@ -160,6 +160,21 @@
   box-shadow: 0 4px 16px rgba(0, 122, 255, 0.1);
 }
 
+/* Post Category Tags */
+.lfc-post-tag {
+  display: inline-flex !important;
+  align-items: center;
+  padding: 2px 8px !important;
+  border-radius: 10px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: white !important;
+  margin-left: 8px !important;
+  white-space: nowrap !important;
+  text-decoration: none !important;
+  flex-shrink: 0 !important;
+}
+
 /* Fade effect for filtered posts */
 .lfc-faded {
   opacity: 0.25 !important;

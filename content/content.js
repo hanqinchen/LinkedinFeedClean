@@ -392,6 +392,85 @@
     // Profile 页面自动提取 memberId
     initProfilePageIdExtraction();
 
+    // 检查并处理：从 feed 页面新建分类后跳转到 profile 的添加任务
+    if (isProfilePage() && settings.pendingAddToCategory) {
+      const elapsed = Date.now() - (settings.pendingAddStartTime || 0);
+      if (elapsed < 60000) { // 1分钟内有效
+        const currentProfilePath = getProfilePathFromUrl();
+        if (currentProfilePath === settings.pendingAddProfilePath) {
+          debugShow(`[新建分类] 检测到待添加任务，处理中...`);
+          // 等待页面加载后处理（确保能提取到完整信息）
+          setTimeout(async () => {
+            const memberId = extractMemberIdFromProfilePage();
+            let avatarUrl = null;
+            let fullName = null;
+
+            // 提取头像
+            const profilePhotoContainer = document.querySelector('[aria-label="Profile photo"]');
+            if (profilePhotoContainer) {
+              const img = profilePhotoContainer.querySelector('img');
+              if (img) avatarUrl = img.src;
+
+              // 提取姓名
+              let container = profilePhotoContainer.parentElement;
+              for (let i = 0; i < 5 && container && !fullName; i++) {
+                const headings = container.querySelectorAll('h1, h2');
+                for (const h of headings) {
+                  const text = h.textContent.trim();
+                  if (text.length > 2 && text.length < 100) {
+                    fullName = text;
+                    break;
+                  }
+                }
+                container = container.parentElement;
+              }
+            }
+
+            // 兜底姓名提取
+            if (!fullName) {
+              const h1 = document.querySelector('h1') || document.querySelector('h2');
+              if (h1) fullName = h1.textContent.trim();
+            }
+
+            // 添加到分类
+            const cat = categories.find(c => String(c.id) === String(settings.pendingAddToCategory));
+            if (cat) {
+              if (!Array.isArray(cat.members)) cat.members = [];
+              const newMember = {
+                name: fullName || currentProfilePath,
+                profilePath: currentProfilePath,
+                title: '',
+                addedAt: Date.now()
+              };
+              if (memberId) newMember.linkedinId = memberId;
+              if (avatarUrl) newMember.avatar = avatarUrl;
+
+              cat.members.push(newMember);
+              await Storage.saveCategories(categories);
+              debugShow(`[新建分类] 已添加 ${newMember.name} 到 ${cat.name}`);
+            }
+
+            // 清除任务状态
+            const newSettings = { ...settings };
+            delete newSettings.pendingAddToCategory;
+            delete newSettings.pendingAddProfilePath;
+            delete newSettings.pendingAddStartTime;
+            await Storage.saveSettings(newSettings);
+
+            // 提示成功，用户可关闭此标签页继续阅读原 Feed
+            alert(`✅ 已成功加入「${cat?.name || '新分类'}」！\n\n可以关闭此标签页，回到原 Feed 页面继续浏览。`);
+          }, 2000);
+        }
+      } else {
+        // 超时清除
+        const newSettings = { ...settings };
+        delete newSettings.pendingAddToCategory;
+        delete newSettings.pendingAddProfilePath;
+        delete newSettings.pendingAddStartTime;
+        Storage.saveSettings(newSettings).catch(() => {});
+      }
+    }
+
     if (isFeedPage()) {
       startFeedMode();
       // 如果有待处理的批量任务，跳转到第一个成员的 profile 页面
@@ -547,7 +626,9 @@
               injectTarget.parentElement.insertBefore(filterBar, injectTarget);
               debugShow('[inject] 过滤栏已插入!');
               injected = true;
-              // 不在这里设置 feedContainer，让 waitForFeed 正确定位帖子容器
+              // 关键修复：快速注入成功后也要调用过滤
+              applyFilter();
+              observeFeed();
               return;
             }
           }
@@ -1084,19 +1165,253 @@
   }
 
   function getPostAuthorPath(post) {
-    const links = post.querySelectorAll('a[href*="/in/"], a[href*="/company/"], a[href*="/school/"]');
+    const links = post.querySelectorAll('a[href*="/in/"], a[href*="/company/"], a[href*="/school/"], a[href*="/showcase/"]');
     for (const link of links) {
       if (link.closest('.comments-comments-list, .comments-comment-item, .social-details-social-counts')) continue;
-      const nested = link.closest('[data-urn]');
-      if (nested && nested !== post && post.contains(nested)) continue;
+
+      // 关键修复：只找真正的帖子发布者（在有 componentkey 的作者信息容器内）
+      // 排除 "X likes this"、"X commented on this" 等互动提示区
+      let hasComponentKey = false;
+      let parent = link;
+      for (let i = 0; i < 4; i++) {
+        if (parent.parentElement) {
+          parent = parent.parentElement;
+          if (parent.getAttribute('componentkey')) {
+            hasComponentKey = true;
+            break;
+          }
+        }
+      }
+      if (!hasComponentKey) continue;
 
       const href = link.getAttribute('href');
       if (!href || typeof href !== 'string') continue;
-      const match = href.match(/\/(in|company|school)\/([^/?#]+)/);
-      if (match && match[1] && match[2]) return `/${match[1]}/${match[2]}`;
+      const match = href.match(/\/(in|company|school|showcase)\/([^/?#]+)/);
+      if (match && match[1] && match[0]) {
+        return match[0];
+      }
     }
     return null;
   }
+
+  // 全局关闭所有下拉菜单
+  function closeAllAddMenus() {
+    document.querySelectorAll('.lfc-add-menu').forEach(menu => menu.remove());
+  }
+
+  // 全局已处理作者集合（避免跨帖子间重复）
+  const processedAuthors = new Set();
+
+  // 辅助：为单个作者插入标签或按钮
+  function insertTagForAuthor(authorLink, profilePath) {
+    // 关键修复：全局去重，同一个作者只处理一次
+    if (processedAuthors.has(profilePath)) return;
+
+    // 最简化：直接在链接的父元素插入（找最近的flex或inline容器
+    let insertPoint = authorLink.parentElement;
+
+    // 向上找2层，确保在合适的容器
+    for (let i = 0; i < 2 && insertPoint; i++) {
+      // 如果已经有标签，直接返回
+      if (insertPoint.querySelector('.lfc-post-tag, .lfc-add-btn')) return;
+      if (window.getComputedStyle(insertPoint).display.match(/flex|inline/)) break;
+      insertPoint = insertPoint.parentElement;
+    }
+    if (!insertPoint) return;
+
+    // 最终检查：这个容器是否已有标签
+    if (insertPoint.querySelector('.lfc-post-tag, .lfc-add-btn')) return;
+
+    // 标记已处理
+    processedAuthors.add(profilePath);
+
+    // 查找该作者属于哪个分类（使用统一匹配函数，支持多种匹配）
+    const memberCats = categories.filter(cat =>
+      cat.members.some(m => memberMatches(m, profilePath, null))
+    );
+
+    if (memberCats.length > 0) {
+      // 已分类：显示彩色标签
+      const cat = memberCats[0];
+      const tag = document.createElement('span');
+      tag.className = 'lfc-post-tag';
+      tag.textContent = (cat.icon || '') + cat.name;
+      tag.style.cssText = `
+        display: inline-flex !important;
+        align-items: center !important;
+        padding: 2px 8px !important;
+        border-radius: 10px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: white !important;
+        margin-left: 8px !important;
+        white-space: nowrap !important;
+        background: ${cat.color || '#007AFF'} !important;
+        z-index: 9999 !important;
+        vertical-align: middle !important;
+        flex-shrink: 0 !important;
+      `;
+      insertPoint.appendChild(tag);
+    } else {
+      // 未分类：显示【+ 分组】按钮
+      const addBtn = document.createElement('button');
+      addBtn.className = 'lfc-add-btn';
+      addBtn.textContent = '+ 分组';
+      addBtn.style.cssText = `
+        display: inline-flex !important;
+        align-items: center !important;
+        padding: 2px 8px !important;
+        border-radius: 10px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: #007AFF !important;
+        background: rgba(0, 122, 255, 0.1) !important;
+        border: 1px solid rgba(0, 122, 255, 0.2) !important;
+        margin-left: 8px !important;
+        white-space: nowrap !important;
+        z-index: 99999 !important;
+        cursor: pointer !important;
+        vertical-align: middle !important;
+        flex-shrink: 0 !important;
+      `;
+
+      // 点击按钮显示下拉菜单
+      addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        document.querySelectorAll('.lfc-add-menu').forEach(m => m.remove());
+
+        const menu = document.createElement('div');
+        menu.className = 'lfc-add-menu';
+        menu.style.cssText = `
+          position: fixed !important;
+          background: white !important;
+          border-radius: 12px !important;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+          z-index: 9999999 !important;
+          min-width: 160px !important;
+          max-height: 300px !important;
+          overflow-y: auto !important;
+          padding: 8px 0 !important;
+        `;
+
+        const rect = addBtn.getBoundingClientRect();
+        menu.style.top = `${rect.bottom + 5}px`;
+        menu.style.left = `${Math.min(rect.left, window.innerWidth - 180)}px`;
+
+        // 添加现有分类选项
+        categories.forEach(cat => {
+          const option = document.createElement('div');
+          option.textContent = (cat.icon || '') + ' ' + cat.name;
+          option.style.cssText = `
+            padding: 10px 16px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            color: #1d1d1f !important;
+            cursor: pointer !important;
+            white-space: nowrap !important;
+          `;
+          option.addEventListener('mouseenter', () => option.style.background = 'rgba(0, 122, 255, 0.08)');
+          option.addEventListener('mouseleave', () => option.style.background = 'transparent');
+          option.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const nameEl = authorLink.querySelector('span') || authorLink;
+            const authorName = nameEl.textContent.trim().length < 50 ? nameEl.textContent.trim() : profilePath.split('/').pop();
+
+            if (!Array.isArray(cat.members)) cat.members = [];
+            cat.members.push({ name: authorName, profilePath, addedAt: Date.now() });
+            await Storage.saveCategories(categories);
+            location.reload();
+          });
+          menu.appendChild(option);
+        });
+
+        // 分割线 + 新建分类
+        const divider = document.createElement('div');
+        divider.style.cssText = 'height: 1px !important; background: #e5e5e5 !important; margin: 4px 12px !important;';
+        menu.appendChild(divider);
+
+        const newOption = document.createElement('div');
+        newOption.textContent = '+ 新建分类';
+        newOption.style.cssText = `
+          padding: 10px 16px !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          color: #007AFF !important;
+          cursor: pointer !important;
+          white-space: nowrap !important;
+        `;
+        newOption.addEventListener('mouseenter', () => newOption.style.background = 'rgba(0, 122, 255, 0.08)');
+        newOption.addEventListener('mouseleave', () => newOption.style.background = 'transparent');
+        newOption.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          menu.remove();
+
+          // 弹出输入框让用户输入分类名称
+          const catName = prompt('请输入新分类名称：');
+          if (!catName || !catName.trim()) return;
+
+          // 创建新分类（先保存空分类，跳转后再加成员，确保信息完整）
+          const newCatId = Storage.generateId();
+          const newCat = {
+            id: newCatId,
+            name: catName.trim(),
+            color: '#007AFF',
+            order: categories.length,
+            members: []
+          };
+
+          categories.push(newCat);
+          await Storage.saveCategories(categories);
+
+          // 保存待处理的添加成员任务到 settings
+          const newSettings = {
+            ...settings,
+            pendingAddToCategory: newCatId,
+            pendingAddProfilePath: profilePath,
+            pendingAddStartTime: Date.now()
+          };
+          await Storage.saveSettings(newSettings);
+
+          // 在新标签页打开作者 profile，原 feed 页保持不变
+          window.open(`https://www.linkedin.com${profilePath}`, '_blank');
+
+          // 提示用户
+          alert(`已在新标签页打开「${profilePath.split('/').pop()}」的主页\n\n将自动完成分类添加，完成后可关闭新标签页继续浏览 Feed`);
+        });
+        menu.appendChild(newOption);
+
+        document.body.appendChild(menu);
+      });
+
+      insertPoint.appendChild(addBtn);
+    }
+  }
+
+  // 主函数：为帖子中所有作者渲染标签
+  function renderCategoryTags(post) {
+    // 找到帖子中所有作者链接（个人+公司+学校）
+    const authorLinks = post.querySelectorAll('a[href*="/in/"], a[href*="/company/"], a[href*="/school/"], a[href*="/showcase/"]');
+
+    // 排除评论区和互动统计区的链接
+    const filtered = Array.from(authorLinks).filter(link =>
+      !link.closest('.comments-comments-list, .comments-comment-item, .social-details-social-counts')
+    );
+
+    filtered.forEach(link => {
+      const href = link.getAttribute('href');
+      if (!href || typeof href !== 'string') return;
+      const match = href.match(/\/(in|company|school|showcase)\/[^/?#]+/);
+      if (!match) return;
+
+      const profilePath = match[0];
+      insertTagForAuthor(link, profilePath);
+    });
+  }
+
+  // 点击其他地方关闭所有菜单
+  document.addEventListener('click', closeAllAddMenus);
 
   function findPosts() {
     if (!feedContainer) return [];
@@ -1130,20 +1445,38 @@
       activeCategory = null;
     }
 
-    debugShow(`[filter] active=${activeCategory || '全部'}, 找到 ${posts.length} 个帖子`);
+    debugShow(`[applyFilter] posts=${posts.length}, activeCategory=${activeCategory}`);
+
+    // 关键：每次过滤前清空已处理集合 + 清理所有旧标签/按钮
+    processedAuthors.clear();
+    document.querySelectorAll('.lfc-post-tag, .lfc-add-btn').forEach(el => el.remove());
 
     // 自动提取 Feed 中可见帖子作者的 ID（提前收集，减少后续批量跳转）
     extractVisiblePostAuthorsId();
 
-    posts.forEach(post => {
-      const authorPath = getPostAuthorPath(post);
+    // 收集所有已分类作者（去重）
+    const categorizedAuthors = new Set();
+    if (!activeCategory) {
+      categories.forEach(cat => {
+        cat.members.forEach(m => {
+          if (m.profilePath) categorizedAuthors.add(m.profilePath);
+        });
+      });
+      debugShow(`[标签] 需要渲染标签的作者数: ${categorizedAuthors.size}`);
+    }
+
+    posts.forEach((post, idx) => {
       if (!activeCategory) {
         post.style.display = '';
         post.style.opacity = '';
         shown++;
+        // 给帖子内所有作者渲染标签或加入按钮
+        renderCategoryTags(post);
         return;
       }
 
+      // 分类过滤模式：检查帖子作者是否属于该分类
+      const authorPath = getPostAuthorPath(post);
       if (!authorPath) {
         unknown++;
         return;
@@ -1152,7 +1485,6 @@
       const cat = categories.find(c => c.id === activeCategory);
       if (!cat) return;
 
-      // 确保 profilePath 是字符串
       const isMember = cat.members.some(m =>
         typeof m.profilePath === 'string' && m.profilePath === authorPath
       );
