@@ -10,14 +10,14 @@
     const key = document.getElementById('api-key').value.trim();
     await Storage.saveSettings({ ...settings, claudeApiKey: key });
     settings.claudeApiKey = key;
-    showToast('API Key 已保存');
+    showToast('API Key saved');
   });
 
   document.getElementById('filter-mode').addEventListener('change', async (e) => {
     const mode = e.target.value;
     await Storage.saveSettings({ ...settings, filterMode: mode });
     settings.filterMode = mode;
-    showToast('过滤模式已更新');
+    showToast('Filter mode updated');
   });
 
   document.getElementById('btn-export').addEventListener('click', async () => {
@@ -29,7 +29,7 @@
     a.download = 'linkedin-feed-categorizer-backup.json';
     a.click();
     URL.revokeObjectURL(url);
-    showToast('数据已导出');
+    showToast('Data exported');
   });
 
   document.getElementById('btn-import').addEventListener('click', () => {
@@ -45,14 +45,14 @@
       const data = JSON.parse(text);
 
       if (!Array.isArray(data.categories)) {
-        showToast('文件格式无效');
+        showToast('Invalid file format');
         return;
       }
 
       await Storage.saveCategories(data.categories);
-      showToast(`已导入 ${data.categories.length} 个分类`);
+      showToast(`Imported ${data.categories.length} categories`);
     } catch {
-      showToast('导入失败：文件解析错误');
+      showToast('Import failed: file parse error');
     }
 
     e.target.value = '';

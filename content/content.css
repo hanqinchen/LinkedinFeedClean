@@ -124,11 +124,7 @@
 }
 
 .lfc-profile-cat-active {
-  background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
-  border-color: transparent;
-  color: #fff;
   cursor: default;
-  box-shadow: 0 4px 16px rgba(0, 122, 255, 0.35);
 }
 
 .lfc-profile-cat-new {
@@ -173,6 +169,13 @@
   white-space: nowrap !important;
   text-decoration: none !important;
   flex-shrink: 0 !important;
+  cursor: pointer !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lfc-post-tag:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Fade effect for filtered posts */
@@ -183,4 +186,9 @@
 
 .lfc-faded:hover {
   opacity: 0.6 !important;
+}
+
+.lfc-filtered-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }

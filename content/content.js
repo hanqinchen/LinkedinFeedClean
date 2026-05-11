@@ -165,6 +165,26 @@
     LOG(msg);
   }
 
+  // 显示成功提示 Toast
+  function showToast(message, duration = 2000) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed !important;
+      top: 20px !important;
+      right: 20px !important;
+      background: rgba(0, 122, 255, 0.95) !important;
+      color: white !important;
+      padding: 12px 20px !important;
+      border-radius: 12px !important;
+      font: 600 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+      z-index: 99999999 !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
+  }
+
   // 从 Profile 页面提取 memberId（支持个人/公司/学校）
   function extractMemberIdFromProfilePage() {
     // 个人页面 ID 提取
@@ -392,26 +412,23 @@
     // Profile 页面自动提取 memberId
     initProfilePageIdExtraction();
 
-    // 检查并处理：从 feed 页面新建分类后跳转到 profile 的添加任务
+    // Handle pending add task from Feed -> New Category flow
     if (isProfilePage() && settings.pendingAddToCategory) {
       const elapsed = Date.now() - (settings.pendingAddStartTime || 0);
-      if (elapsed < 60000) { // 1分钟内有效
+      if (elapsed < 60000) { // Valid within 1 minute
         const currentProfilePath = getProfilePathFromUrl();
         if (currentProfilePath === settings.pendingAddProfilePath) {
-          debugShow(`[新建分类] 检测到待添加任务，处理中...`);
-          // 等待页面加载后处理（确保能提取到完整信息）
+          debugShow(`[New Category] Pending task detected, processing...`);
           setTimeout(async () => {
             const memberId = extractMemberIdFromProfilePage();
             let avatarUrl = null;
             let fullName = null;
 
-            // 提取头像
             const profilePhotoContainer = document.querySelector('[aria-label="Profile photo"]');
             if (profilePhotoContainer) {
               const img = profilePhotoContainer.querySelector('img');
               if (img) avatarUrl = img.src;
 
-              // 提取姓名
               let container = profilePhotoContainer.parentElement;
               for (let i = 0; i < 5 && container && !fullName; i++) {
                 const headings = container.querySelectorAll('h1, h2');
@@ -426,13 +443,11 @@
               }
             }
 
-            // 兜底姓名提取
             if (!fullName) {
               const h1 = document.querySelector('h1') || document.querySelector('h2');
               if (h1) fullName = h1.textContent.trim();
             }
 
-            // 添加到分类
             const cat = categories.find(c => String(c.id) === String(settings.pendingAddToCategory));
             if (cat) {
               if (!Array.isArray(cat.members)) cat.members = [];
@@ -447,22 +462,19 @@
 
               cat.members.push(newMember);
               await Storage.saveCategories(categories);
-              debugShow(`[新建分类] 已添加 ${newMember.name} 到 ${cat.name}`);
+              debugShow(`[New Category] Added ${newMember.name} to ${cat.name}`);
             }
 
-            // 清除任务状态
             const newSettings = { ...settings };
             delete newSettings.pendingAddToCategory;
             delete newSettings.pendingAddProfilePath;
             delete newSettings.pendingAddStartTime;
             await Storage.saveSettings(newSettings);
 
-            // 提示成功，用户可关闭此标签页继续阅读原 Feed
-            alert(`✅ 已成功加入「${cat?.name || '新分类'}」！\n\n可以关闭此标签页，回到原 Feed 页面继续浏览。`);
+            alert(`✅ Successfully added to「${cat?.name || 'New Category'}」！\n\nYou can close this tab and return to your Feed.`);
           }, 2000);
         }
       } else {
-        // 超时清除
         const newSettings = { ...settings };
         delete newSettings.pendingAddToCategory;
         delete newSettings.pendingAddProfilePath;
@@ -505,7 +517,7 @@
     }, 10000);  // 每 10 秒检测一次
   }
 
-  // 显示扩展上下文失效提示横幅
+  // Show extension context invalidated banner
   function showContextInvalidatedBanner() {
     if (document.getElementById('lfc-context-error')) return;
 
@@ -525,9 +537,9 @@
       box-shadow: 0 2px 12px rgba(0,0,0,0.15);
     `;
     banner.innerHTML = `
-      <strong>LinkedIn Feed Categorizer</strong>: 扩展已更新，请
-      <a href="#" onclick="location.reload(); return false;" style="color:white;text-decoration:underline;margin:0 6px;font-weight:600;">刷新页面</a>
-      恢复功能
+      <strong>LinkedIn Feed Categorizer</strong>: Extension updated. Please
+      <a href="#" onclick="location.reload(); return false;" style="color:white;text-decoration:underline;margin:0 6px;font-weight:600;">refresh the page</a>
+      to restore functionality.
     `;
     document.body.prepend(banner);
   }
@@ -612,6 +624,11 @@
       }
 
       if (sortEl) {
+        // 关键修复：先检查 DOM 中是否已有筛选栏，避免重复
+        if (document.getElementById('lfc-filter-bar')) {
+          injected = true;
+          return;
+        }
         debugShow('[inject] 找到Sort by! 直接插入过滤栏...');
         // 在 sortEl 的祖先元素中找合适位置插入
         let injectTarget = sortEl;
@@ -774,8 +791,11 @@
         btn.className = 'lfc-profile-cat' + (isMember ? ' lfc-profile-cat-active' : '');
         btn.textContent = isMember ? '✓ ' + cat.name : cat.name;
         if (cat.color && isMember) {
-          btn.style.borderColor = cat.color;
+          btn.style.background = '#fff';
           btn.style.color = cat.color;
+          btn.style.borderColor = cat.color;
+          btn.style.borderLeft = `3px solid ${cat.color}`;
+          btn.style.fontWeight = '700';
         }
         btn.addEventListener('click', async () => {
           if (isMember) {
@@ -808,9 +828,9 @@
 
       const newBtn = document.createElement('button');
       newBtn.className = 'lfc-profile-cat lfc-profile-cat-new';
-      newBtn.textContent = '+ 新建';
+      newBtn.textContent = '+ New';
       newBtn.addEventListener('click', async () => {
-        const name = prompt('输入新分类名称：');
+        const name = prompt('Enter new category name:');
         if (!name) return;
         removeFromAll();
         const newMember = { name: profileName, profilePath, title: '' };
@@ -873,7 +893,12 @@
   }
 
   function injectFilterBar() {
-    if (document.getElementById('lfc-filter-bar')) return;
+    // 双重保险：先检查是否已存在
+    const existing = document.getElementById('lfc-filter-bar');
+    if (existing) {
+      debugShow('[inject] 筛选栏已存在，跳过重复注入');
+      return;
+    }
     if (!feedContainer) return;
 
     filterBar = document.createElement('div');
@@ -886,14 +911,14 @@
     } else {
       feedContainer.prepend(filterBar);
     }
-    LOG('filter bar injected');
+    debugShow('[inject] 常规注入完成');
   }
 
   function renderTabs() {
     if (!filterBar) return;
     filterBar.innerHTML = '';
 
-    const allTab = createTab('全部', null, activeCategory === null);
+    const allTab = createTab('All', null, activeCategory === null);
     filterBar.appendChild(allTab);
 
     categories
@@ -908,7 +933,7 @@
 
     const manageTab = document.createElement('button');
     manageTab.className = 'lfc-tab lfc-tab-manage';
-    manageTab.textContent = '⚙ 管理';
+    manageTab.textContent = '⚙ Manage';
     manageTab.addEventListener('click', () => {
       try { chrome.runtime.sendMessage({ type: 'openPopup' }); } catch {}
     });
@@ -923,7 +948,6 @@
       // 使用颜色作为高亮，但不是背景色
     }
     tab.addEventListener('click', async () => {
-      // "全部"分类：保持现有过滤行为
       if (catId === null) {
         activeCategory = null;
         await Storage.saveSettings({ ...settings, activeCategory: null });
@@ -932,42 +956,23 @@
         return;
       }
 
-      // 具体分类：打开搜索结果页
       const cat = categories.find(c => String(c.id) === catId);
       if (!cat) return;
 
-      const personsWithoutId = cat.members.filter(m => m.profilePath?.startsWith('/in/') && needsProfileVisit(m));
-      const orgsWithoutId = cat.members.filter(m =>
-        (m.profilePath?.startsWith('/company/') || m.profilePath?.startsWith('/school/') || m.profilePath?.startsWith('/showcase/')) && needsProfileVisit(m)
-      );
-      const membersWithoutId = [...personsWithoutId, ...orgsWithoutId];
-
-      // 如果有成员需要提取信息，先提示并开始批量提取
+      const membersWithoutId = (cat.members || []).filter(m => needsProfileVisit(m));
       if (membersWithoutId.length > 0) {
-        debugShow(`[信息补全] 分类 "${cat.name}" 有 ${membersWithoutId.length} 个成员需要提取信息`);
-        membersWithoutId.forEach(m => debugShow(`  - ${m.name || m.profilePath}`));
-
-        // 开始逐个打开提取（第一个在当前页，后续新标签）
-        let msg = `开始提取 ${membersWithoutId.length} 个成员的信息，请稍候...\n`;
-        if (personsWithoutId.length > 0) msg += `• 个人: ${personsWithoutId.length} 个\n`;
-        if (orgsWithoutId.length > 0) msg += `• 公司/学校: ${orgsWithoutId.length} 个\n`;
-        msg += '\n页面会自动跳转，提取 ID 和真实姓名。完成后请重新点击分类。';
-        alert(msg);
-
-        // 保存当前分类 ID 到 storage，提取完后可自动跳转
-        await Storage.saveSettings({ ...settings, pendingCategoryId: catId, pendingExtractIndex: 0, pendingStartTime: Date.now() });
-
-        // 跳转到第一个需要提取的成员页面
-        const firstMember = membersWithoutId[0];
-        window.location.href = `https://www.linkedin.com${firstMember.profilePath}`;
+        alert(`${membersWithoutId.length} member(s) in this category need ID extraction. You'll be navigated to their profiles automatically for data collection, then redirected to search results.`);
+        await Storage.saveSettings({
+          ...settings,
+          pendingCategoryId: catId,
+          pendingStartTime: Date.now(),
+          pendingExtractIndex: 0
+        });
+        window.location.href = `https://www.linkedin.com${membersWithoutId[0].profilePath}`;
         return;
       }
 
-      // 所有成员都有 ID，直接跳转搜索
       const urls = buildCategorySearchUrls(cat);
-      debugShow(`[搜索跳转] 分类: ${cat.name}, 找到 ${urls.length} 个 URL`);
-      urls.forEach((url, i) => debugShow(`  URL${i + 1}: ${url}`));
-
       if (urls.length > 0) {
         window.location.href = urls[0];
         if (urls.length > 1) {
@@ -1231,7 +1236,7 @@
     );
 
     if (memberCats.length > 0) {
-      // 已分类：显示彩色标签
+      // Categorized: show colored tag (click to change/remove)
       const cat = memberCats[0];
       const tag = document.createElement('span');
       tag.className = 'lfc-post-tag';
@@ -1250,13 +1255,153 @@
         z-index: 9999 !important;
         vertical-align: middle !important;
         flex-shrink: 0 !important;
+        cursor: pointer !important;
       `;
+
+      // Click tag → show reassign/remove dropdown
+      tag.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        document.querySelectorAll('.lfc-add-menu').forEach(m => m.remove());
+
+        const menu = document.createElement('div');
+        menu.className = 'lfc-add-menu';
+        menu.style.cssText = `
+          position: fixed !important;
+          background: white !important;
+          border-radius: 12px !important;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+          z-index: 9999999 !important;
+          min-width: 160px !important;
+          max-height: 300px !important;
+          overflow-y: auto !important;
+          padding: 8px 0 !important;
+        `;
+
+        const rect = tag.getBoundingClientRect();
+        menu.style.top = `${rect.bottom + 5}px`;
+        menu.style.left = `${Math.min(rect.left, window.innerWidth - 180)}px`;
+
+        categories.forEach(cat2 => {
+          const isCurrent = String(cat2.id || '') === String(cat.id || '');
+          const option = document.createElement('div');
+          option.textContent = (isCurrent ? '✓ ' : '') + (cat2.icon || '') + ' ' + cat2.name;
+          option.style.cssText = `
+            padding: 10px 16px !important;
+            font-size: 13px !important;
+            font-weight: ${isCurrent ? '700' : '500'} !important;
+            color: #1d1d1f !important;
+            cursor: pointer !important;
+            white-space: nowrap !important;
+          `;
+          option.addEventListener('mouseenter', () => option.style.background = 'rgba(0, 122, 255, 0.08)');
+          option.addEventListener('mouseleave', () => option.style.background = 'transparent');
+          option.addEventListener('click', async (e2) => {
+            e2.stopPropagation();
+            menu.remove();
+
+            if (isCurrent) {
+              // Click current category → remove member
+              const memberIdx = cat.members.findIndex(m => memberMatches(m, profilePath, null));
+              if (memberIdx !== -1) cat.members.splice(memberIdx, 1);
+              await Storage.saveCategories(categories);
+              categories = await Storage.getCategories();
+
+              tag.remove();
+              processedAuthors.delete(profilePath);
+              insertTagForAuthor(authorLink, profilePath);
+              showToast(`Removed from「${cat.name}」`);
+            } else {
+              // Click different category → reassign
+              const nameEl = authorLink.querySelector('span') || authorLink;
+              const authorName = nameEl.textContent.trim().length < 50 ? nameEl.textContent.trim() : profilePath.split('/').pop();
+
+              const memberIdx = cat.members.findIndex(m => memberMatches(m, profilePath, null));
+              let memberData;
+              if (memberIdx !== -1) {
+                memberData = cat.members[memberIdx];
+                cat.members.splice(memberIdx, 1);
+              } else {
+                memberData = { name: authorName, profilePath, addedAt: Date.now() };
+              }
+
+              if (!Array.isArray(cat2.members)) cat2.members = [];
+              cat2.members.push(memberData);
+              await Storage.saveCategories(categories);
+              categories = await Storage.getCategories();
+
+              tag.textContent = (cat2.icon || '') + cat2.name;
+              tag.style.background = cat2.color || '#007AFF';
+              cat.id = cat2.id;
+              cat.name = cat2.name;
+              cat.icon = cat2.icon;
+              cat.color = cat2.color;
+
+              showToast(`✅ Moved to「${cat2.name}」`);
+            }
+          });
+          menu.appendChild(option);
+        });
+
+        // Divider + New Category
+        const divider = document.createElement('div');
+        divider.style.cssText = 'height: 1px !important; background: #e5e5e5 !important; margin: 4px 12px !important;';
+        menu.appendChild(divider);
+
+        const newOption = document.createElement('div');
+        newOption.textContent = '+ New Category';
+        newOption.style.cssText = `
+          padding: 10px 16px !important;
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          color: #007AFF !important;
+          cursor: pointer !important;
+          white-space: nowrap !important;
+        `;
+        newOption.addEventListener('mouseenter', () => newOption.style.background = 'rgba(0, 122, 255, 0.08)');
+        newOption.addEventListener('mouseleave', () => newOption.style.background = 'transparent');
+        newOption.addEventListener('click', async (e2) => {
+          e2.stopPropagation();
+          menu.remove();
+
+          const catName = prompt('Enter new category name:');
+          if (!catName || !catName.trim()) return;
+
+          const newCatId = Storage.generateId();
+          const newCat = {
+            id: newCatId,
+            name: catName.trim(),
+            color: '#007AFF',
+            order: categories.length,
+            members: []
+          };
+
+          categories.push(newCat);
+          await Storage.saveCategories(categories);
+
+          const newSettings = {
+            ...settings,
+            pendingAddToCategory: newCatId,
+            pendingAddProfilePath: profilePath,
+            pendingAddStartTime: Date.now()
+          };
+          await Storage.saveSettings(newSettings);
+
+          window.open(`https://www.linkedin.com${profilePath}`, '_blank');
+          alert(`Opened "${profilePath.split('/').pop()}" in a new tab\n\nThe category will be created automatically. Close the new tab and return to your Feed.`);
+        });
+        menu.appendChild(newOption);
+
+        document.body.appendChild(menu);
+      });
+
       insertPoint.appendChild(tag);
     } else {
-      // 未分类：显示【+ 分组】按钮
+      // Not categorized: Show + Group button
       const addBtn = document.createElement('button');
       addBtn.className = 'lfc-add-btn';
-      addBtn.textContent = '+ 分组';
+      addBtn.textContent = '+ Category';
       addBtn.style.cssText = `
         display: inline-flex !important;
         align-items: center !important;
@@ -1322,18 +1467,50 @@
             if (!Array.isArray(cat.members)) cat.members = [];
             cat.members.push({ name: authorName, profilePath, addedAt: Date.now() });
             await Storage.saveCategories(categories);
-            location.reload();
+
+            // 关闭菜单
+            menu.remove();
+
+            // 移除「+ 分组」按钮
+            addBtn.remove();
+
+            // 在同一位置插入彩色标签
+            const tag = document.createElement('span');
+            tag.className = 'lfc-post-tag';
+            tag.textContent = (cat.icon || '') + cat.name;
+            tag.style.cssText = `
+              display: inline-flex !important;
+              align-items: center !important;
+              padding: 2px 8px !important;
+              border-radius: 10px !important;
+              font-size: 11px !important;
+              font-weight: 600 !important;
+              color: white !important;
+              margin-left: 8px !important;
+              white-space: nowrap !important;
+              background: ${cat.color || '#007AFF'} !important;
+              z-index: 9999 !important;
+              vertical-align: middle !important;
+              flex-shrink: 0 !important;
+            `;
+            insertPoint.appendChild(tag);
+
+            // 刷新全局 categories 数据，确保其他帖子也能显示标签
+            categories = await Storage.getCategories();
+
+            // 显示成功提示
+            showToast(`✅ Added to「${cat.name}」`);
           });
           menu.appendChild(option);
         });
 
-        // 分割线 + 新建分类
+        // Divider + New Category
         const divider = document.createElement('div');
         divider.style.cssText = 'height: 1px !important; background: #e5e5e5 !important; margin: 4px 12px !important;';
         menu.appendChild(divider);
 
         const newOption = document.createElement('div');
-        newOption.textContent = '+ 新建分类';
+        newOption.textContent = '+ New Category';
         newOption.style.cssText = `
           padding: 10px 16px !important;
           font-size: 13px !important;
@@ -1349,7 +1526,7 @@
           menu.remove();
 
           // 弹出输入框让用户输入分类名称
-          const catName = prompt('请输入新分类名称：');
+          const catName = prompt('Enter new category name:');
           if (!catName || !catName.trim()) return;
 
           // 创建新分类（先保存空分类，跳转后再加成员，确保信息完整）
@@ -1378,7 +1555,7 @@
           window.open(`https://www.linkedin.com${profilePath}`, '_blank');
 
           // 提示用户
-          alert(`已在新标签页打开「${profilePath.split('/').pop()}」的主页\n\n将自动完成分类添加，完成后可关闭新标签页继续浏览 Feed`);
+          alert(`Opened "${profilePath.split('/').pop()}" in a new tab\n\nThe category will be created automatically. Close the new tab and return to your Feed.`);
         });
         menu.appendChild(newOption);
 
@@ -1437,69 +1614,73 @@
   }
 
   function applyFilter() {
-    const posts = findPosts();
-    let shown = 0, hidden = 0, unknown = 0;
-
     // 防御性检查：确保 activeCategory 是正确类型
     if (activeCategory !== null && typeof activeCategory !== 'string') {
       activeCategory = null;
     }
 
-    debugShow(`[applyFilter] posts=${posts.length}, activeCategory=${activeCategory}`);
+    const isFiltering = !!activeCategory;
 
-    // 关键：每次过滤前清空已处理集合 + 清理所有旧标签/按钮
-    processedAuthors.clear();
-    document.querySelectorAll('.lfc-post-tag, .lfc-add-btn').forEach(el => el.remove());
+    // === All 模式专用：标签渲染准备工作 ===
+    if (!isFiltering) {
+      processedAuthors.clear();
+      document.querySelectorAll('.lfc-post-tag, .lfc-add-btn').forEach(el => el.remove());
+      extractVisiblePostAuthorsId();
+    }
 
-    // 自动提取 Feed 中可见帖子作者的 ID（提前收集，减少后续批量跳转）
-    extractVisiblePostAuthorsId();
-
-    // 收集所有已分类作者（去重）
+    // === 收集已分类作者（仅 All 模式需要渲染标签） ===
     const categorizedAuthors = new Set();
-    if (!activeCategory) {
+    if (!isFiltering) {
       categories.forEach(cat => {
         cat.members.forEach(m => {
           if (m.profilePath) categorizedAuthors.add(m.profilePath);
         });
       });
-      debugShow(`[标签] 需要渲染标签的作者数: ${categorizedAuthors.size}`);
     }
 
-    posts.forEach((post, idx) => {
-      if (!activeCategory) {
+    // === 查找帖子并过滤 ===
+    const posts = findPosts();
+    let shown = 0, hidden = 0, unknown = 0;
+
+    debugShow(`[applyFilter] posts=${posts.length}, activeCategory=${activeCategory}`);
+
+    const mode = (typeof settings.filterMode === 'string') ? settings.filterMode : 'hide';
+    const filterCat = isFiltering ? categories.find(c => String(c.id) === String(activeCategory)) : null;
+
+    posts.forEach(post => {
+      // 先清除旧状态
+      post.classList.remove('lfc-filtered-hidden', 'lfc-faded');
+
+      // === All 模式：显示全部 + 渲染标签 ===
+      if (!isFiltering) {
         post.style.display = '';
         post.style.opacity = '';
         shown++;
-        // 给帖子内所有作者渲染标签或加入按钮
         renderCategoryTags(post);
         return;
       }
 
-      // 分类过滤模式：检查帖子作者是否属于该分类
+      // === 过滤模式 ===
+      if (!filterCat) return;
+
       const authorPath = getPostAuthorPath(post);
       if (!authorPath) {
-        unknown++;
-        return;
+        return;  // 不处理：可能是 LinkedIn 的 sentinel/spinner，保持原样
       }
 
-      const cat = categories.find(c => c.id === activeCategory);
-      if (!cat) return;
-
-      const isMember = cat.members.some(m =>
+      const isMember = filterCat.members.some(m =>
         typeof m.profilePath === 'string' && m.profilePath === authorPath
       );
-      const mode = (typeof settings.filterMode === 'string') ? settings.filterMode : 'hide';
 
       if (isMember) {
         post.style.display = '';
         post.style.opacity = '';
         shown++;
       } else if (mode === 'hide') {
-        post.style.display = 'none';
+        post.classList.add('lfc-filtered-hidden');
         hidden++;
       } else {
-        post.style.display = '';
-        post.style.opacity = '0.3';
+        post.classList.add('lfc-faded');
         hidden++;
       }
     });
@@ -1512,11 +1693,18 @@
     const target = feedContainer || findFeedColumn();
     if (!target) return;
 
-    // 添加防抖，避免频繁调用
     let filterTimeout = null;
+    let filtering = false;
+
     feedObserver = new MutationObserver(() => {
+      if (filtering) return;
       if (filterTimeout) clearTimeout(filterTimeout);
-      filterTimeout = setTimeout(() => applyFilter(), 100);
+      filterTimeout = setTimeout(() => {
+        filtering = true;
+        applyFilter();
+        filtering = false;
+        observeFeed(); // Reconnect fresh observer
+      }, 150);
     });
 
     feedObserver.observe(target, { childList: true, subtree: true });
@@ -1555,7 +1743,7 @@
     }
 
     if (message.type === 'promptNewCategory') {
-      const name = prompt('输入新分类名称：');
+      const name = prompt('Enter new category name:');
       if (!name) return;
       (async () => {
         const cats = await Storage.getCategories();

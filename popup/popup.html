@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,61 +11,61 @@
     <!-- Header -->
     <header class="header">
       <h1>Feed Categorizer</h1>
-      <button id="btn-ai-suggest" class="btn btn-primary">✨ AI 智能分类</button>
+      <button id="btn-ai-suggest" class="btn btn-primary">✨ AI Sort</button>
     </header>
 
-    <!-- 扩展上下文失效提示 -->
+    <!-- Extension context invalidated warning -->
     <div id="context-invalid" class="hidden" style="padding: 20px; margin: 15px; text-align: center; background: #fff3cd; border-radius: 8px;">
-      <p style="margin: 0 0 10px 0; color: #856404; font-weight: 500;">⚠️ 扩展需要重新加载</p>
-      <p style="margin: 0 0 15px 0; font-size: 13px; color: #856404;">请在 <code style="background: #ffeaa7; padding: 2px 6px; border-radius: 4px;">chrome://extensions/</code> 页面刷新此扩展</p>
-      <button onclick="location.reload()" class="btn btn-secondary" style="font-size: 13px;">刷新 popup</button>
+      <p style="margin: 0 0 10px 0; color: #856404; font-weight: 500;">⚠️ Extension needs reload</p>
+      <p style="margin: 0 0 15px 0; font-size: 13px; color: #856404;">Please refresh this extension at <code style="background: #ffeaa7; padding: 2px 6px; border-radius: 4px;">chrome://extensions/</code></p>
+      <button onclick="location.reload()" class="btn btn-secondary" style="font-size: 13px;">Refresh Popup</button>
     </div>
 
-    <!-- 分类列表视图 -->
+    <!-- Category List View -->
     <div id="view-categories">
       <div class="section-header">
-        <span>分类</span>
-        <button id="btn-add-category" class="btn btn-text">+ 新建分类</button>
+        <span>Categories</span>
+        <button id="btn-add-category" class="btn btn-text">+ New Category</button>
       </div>
       <div id="category-list">
-        <p class="empty-hint">还没有分类<br>点击 "+ 新建分类" 创建你的第一个分类</p>
+        <p class="empty-hint">No categories yet.<br>Click "+ New Category" to create your first one</p>
       </div>
     </div>
 
-    <!-- 新建/编辑分类 -->
+    <!-- New/Edit Category -->
     <div id="view-edit-category" class="hidden">
       <div class="section-header">
-        <button class="btn btn-back btn-back-category">← 返回</button>
-        <span id="edit-category-title">新建分类</span>
+        <button class="btn btn-back btn-back-category">← Back</button>
+        <span id="edit-category-title">New Category</span>
         <span></span>
       </div>
       <div class="form-group">
-        <label>分类名称</label>
-        <input type="text" id="input-category-name" placeholder="如：AI / 机器学习" />
+        <label>Category Name</label>
+        <input type="text" id="input-category-name" placeholder="e.g., AI / SaaS" />
       </div>
       <div class="form-group">
-        <label>图标 Emoji</label>
+        <label>Icon Emoji</label>
         <input type="text" id="input-category-icon" placeholder="🤖 🚀 💰 🎨" maxlength="2" />
       </div>
       <div class="form-group">
-        <label>颜色</label>
+        <label>Color</label>
         <div id="color-picker" class="color-picker"></div>
       </div>
-      <button id="btn-save-category" class="btn btn-primary btn-full">保存分类</button>
-      <button id="btn-delete-category" class="btn btn-danger btn-full hidden">删除分类</button>
+      <button id="btn-save-category" class="btn btn-primary btn-full">Save Category</button>
+      <button id="btn-delete-category" class="btn btn-danger btn-full hidden">Delete Category</button>
     </div>
 
-    <!-- 分类详情 / 成员管理 -->
+    <!-- Category Detail / Member Management -->
     <div id="view-category-detail" class="hidden">
       <div class="section-header">
-        <button class="btn btn-back btn-back-detail">← 返回</button>
+        <button class="btn btn-back btn-back-detail">← Back</button>
         <span id="detail-category-name"></span>
-        <button id="btn-edit-from-detail" class="btn btn-text">编辑</button>
+        <button id="btn-edit-from-detail" class="btn btn-text">Edit</button>
       </div>
       <div id="member-list"></div>
     </div>
 
-    <!-- 主页快捷添加 -->
+    <!-- Quick Add from Profile -->
     <div id="view-quick-add" class="hidden">
       <div class="qa-header">
         <div class="qa-profile">
@@ -74,28 +74,28 @@
         </div>
       </div>
       <div id="qa-belongs" class="qa-belongs hidden">
-        已添加到：<span></span>
+        Added to: <span></span>
       </div>
       <div class="section-header">
-        <span>选择分类</span>
+        <span>Select Category</span>
       </div>
       <div id="qa-category-list"></div>
-      <div id="qa-skip" class="qa-skip">跳过，进入管理界面 →</div>
+      <div id="qa-skip" class="qa-skip">Skip, go to dashboard →</div>
     </div>
 
-    <!-- AI 建议审核 -->
+    <!-- AI Suggestions Review -->
     <div id="view-ai-review" class="hidden">
       <div class="section-header">
-        <button class="btn btn-back btn-back-ai">← 返回</button>
-        <span>AI 分类建议</span>
+        <button class="btn btn-back btn-back-ai">← Back</button>
+        <span>AI Suggestions</span>
         <span></span>
       </div>
       <div id="ai-status">
         <div class="loading-spinner"></div>
-        <p id="ai-status-text">正在分析你的关注列表...</p>
+        <p id="ai-status-text">Analyzing your following list...</p>
       </div>
       <div id="ai-suggestions"></div>
-      <button id="btn-confirm-ai" class="btn btn-primary btn-full hidden">确认保存</button>
+      <button id="btn-confirm-ai" class="btn btn-primary btn-full hidden">Confirm & Save</button>
     </div>
   </div>
 

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>设置 - LinkedIn Feed Categorizer</title>
+  <title>Settings - LinkedIn Feed Categorizer</title>
   <style>
     * {
       margin: 0;
@@ -175,29 +175,29 @@
   <h1>⚙️ LinkedIn Feed Categorizer</h1>
 
   <div class="card">
-    <h2>🔑 Claude API 配置</h2>
-    <label for="api-key">API Key（用于 AI 智能分类功能）</label>
+    <h2>🔑 Claude API Configuration</h2>
+    <label for="api-key">API Key (for AI-powered smart categorization)</label>
     <input type="password" id="api-key" placeholder="sk-ant-api03-..." autocomplete="off" />
     <p class="hint">
-      获取 API Key: <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a>
+      Get API Key: <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a>
     </p>
-    <button id="btn-save-key" class="btn btn-primary">保存设置</button>
+    <button id="btn-save-key" class="btn btn-primary">Save Settings</button>
   </div>
 
   <div class="card">
-    <h2>🎛️ 过滤模式</h2>
-    <label for="filter-mode">选择分类后，非分类成员的帖子如何处理</label>
+    <h2>🎛️ Filter Mode</h2>
+    <label for="filter-mode">How to handle posts from non-categorized members</label>
     <select id="filter-mode">
-      <option value="hide">隐藏（完全不显示）</option>
-      <option value="fade">淡化（降低不透明度）</option>
+      <option value="hide">Hide (don't show at all)</option>
+      <option value="fade">Fade (reduce opacity)</option>
     </select>
   </div>
 
   <div class="card">
-    <h2>💾 数据管理</h2>
+    <h2>💾 Data Management</h2>
     <div class="btn-row">
-      <button id="btn-export" class="btn btn-secondary">导出分类数据</button>
-      <button id="btn-import" class="btn btn-secondary">导入分类数据</button>
+      <button id="btn-export" class="btn btn-secondary">Export Category Data</button>
+      <button id="btn-import" class="btn btn-secondary">Import Category Data</button>
       <input type="file" id="file-import" accept=".json" style="display:none" />
     </div>
   </div>

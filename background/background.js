@@ -13,7 +13,7 @@ async function setupContextMenus() {
     await chrome.contextMenus.removeAll();
     chrome.contextMenus.create({
       id: 'lfc-root',
-      title: '添加到分类',
+      title: 'Add to Category',
       contexts: ['link'],
       targetUrlPatterns: ['https://www.linkedin.com/in/*', 'https://www.linkedin.com/company/*']
     });
@@ -32,7 +32,7 @@ async function setupContextMenus() {
     chrome.contextMenus.create({
       id: 'lfc-new-category',
       parentId: 'lfc-root',
-      title: '+ 新建分类',
+      title: '+ New Category',
       contexts: ['link'],
       targetUrlPatterns: ['https://www.linkedin.com/in/*', 'https://www.linkedin.com/company/*']
     });
@@ -108,7 +108,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Service Worker 激活时重新建立右键菜单
+// Recreate context menus when Service Worker activates
 self.addEventListener('activate', () => {
   setupContextMenus();
 });
@@ -120,20 +120,20 @@ async function handleClaudeAPI(followingData) {
     const apiKey = settings.claudeApiKey;
 
     if (!apiKey) {
-      return { error: '请先在设置页面配置 Claude API Key' };
+      return { error: 'Please configure Claude API Key in settings' };
     }
 
-    const prompt = `你是一个帮助用户整理 LinkedIn 关注列表的助手。
-根据以下关注列表中每个人的姓名、职位和简介，将他们分入合理的主题类别。
+    const prompt = `You are an assistant helping users organize their LinkedIn following list.
+Based on the name, position, and bio of each person in the following list, categorize them into appropriate thematic categories.
 
-要求：
-1. 类别名称简洁明了（2-4个字）
-2. 每人至少归入一个类别，可以属于多个类别
-3. 建议 3-8 个类别
-4. 输出严格 JSON 格式，结构为：
-[{"name": "类别名", "members": [{"name": "姓名", "profilePath": "/in/xxx", "title": "职位"}]}]
+Requirements:
+1. Category names should be concise (2-4 words)
+2. Each person must belong to at least one category, can belong to multiple
+3. Suggest 3-8 categories
+4. Output strictly in JSON format with structure:
+[{"name": "CategoryName", "members": [{"name": "PersonName", "profilePath": "/in/xxx", "title": "Position"}]}]
 
-关注列表：
+Following list:
 ${JSON.stringify(followingData)}`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -160,7 +160,7 @@ ${JSON.stringify(followingData)}`;
     const text = result.content[0].text;
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      return { error: 'AI 返回格式异常' };
+      return { error: 'AI returned invalid format' };
     }
 
     return { suggestions: JSON.parse(jsonMatch[0]) };

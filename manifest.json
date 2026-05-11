@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LinkedIn Feed Categorizer",
   "version": "1.0.0",
-  "description": "按主题分类筛选 LinkedIn 信息流",
+  "description": "Categorize and filter LinkedIn feed by topic",
   "permissions": [
     "storage",
     "activeTab",

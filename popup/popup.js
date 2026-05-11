@@ -9,6 +9,7 @@
   let currentView = 'categories';
   let aiSuggestions = null;
   let detectedProfile = null;
+  let draggedIndex = null;
 
   const views = {
     categories: document.getElementById('view-categories'),
@@ -24,18 +25,14 @@
     return null;
   }
 
-  // 统一成员匹配函数：以 LinkedIn URN 为唯一稳定标识
-  // 匹配优先级（从最可靠到兜底）：
-  // 1. linkedinId 精确匹配（最可靠）
-  // 2. profilePath 精确匹配
-  // 3. 从 profilePath 提取 URN 进行匹配（解决两种 URL 格式兼容问题）
+  // Unified member matching function: uses LinkedIn URN as the stable identifier
+  // Priority (most reliable to fallback):
+  // 1. Exact linkedinId match (most reliable - URN never changes)
+  // 2. Exact profilePath match
+  // 3. Extract URN from profilePath and compare (handles both URL format compatibility)
   function memberMatches(member, profilePath, linkedinId) {
-    // 1. 最高优先级：linkedinId 精确匹配（URN 永远不变）
     if (linkedinId && member.linkedinId === linkedinId) return true;
-    // 2. 次高优先级：profilePath 精确匹配
     if (member.profilePath === profilePath) return true;
-    // 🔑 3. 兜底：从两种 profilePath 中提取 URN 进行比较
-    //    解决 LinkedIn 两种 URL 格式不兼容问题
     if (linkedinId && member.profilePath) {
       const memberUrn = member.profilePath.split('/').pop();
       if (memberUrn && (memberUrn === linkedinId || linkedinId.includes(memberUrn))) {
@@ -45,11 +42,11 @@
     return false;
   }
 
-  // 把 profilePath 格式转换为友好名称
+  // Convert profilePath format to friendly display name
   function cleanMemberName(name) {
     if (!name) return '';
 
-    // 处理纯 LinkedIn ID 格式（ACo 开头或长度 > 30 的无空格字符串）
+    // Handle raw LinkedIn ID format (ACo prefix or long string without spaces)
     if (name.startsWith('ACo') || (name.length > 30 && !name.includes(' '))) {
       const words = name.split(/-|_/).filter(w => w.length > 1 && w.length < 15);
       if (words.length > 0) {
@@ -58,21 +55,18 @@
       return name.slice(0, 15) + '...';
     }
 
-    // 如果是 URL 路径格式
+    // Handle URL path format
     if (name.startsWith('/in/') || name.startsWith('/company/') || name.startsWith('/school/')) {
       const parts = name.split('/').filter(Boolean);
       if (parts.length >= 2) {
         let slug = parts[1];
-        // 处理 LinkedIn ID 格式（通常是 ACo 开头的长字符串）
         if (slug.startsWith('ACo') || slug.length > 30) {
-          // 提取第一个短单词或截断显示
           const words = slug.split(/-|_/).filter(w => w.length > 1 && w.length < 15);
           if (words.length > 0) {
             return words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
           }
           return slug.slice(0, 15) + '...';
         }
-        // 普通 slug 转成首字母大写的空格分隔
         return slug.split(/-|_/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       }
     }
@@ -101,7 +95,7 @@
           const backupData = JSON.parse(backup);
           const hint = document.createElement('p');
           hint.style.cssText = 'margin-top: 10px; font-size: 12px; color: #856404;';
-          hint.textContent = `✅ 检测到 ${backupData.length} 个分类的备份数据，重新加载扩展后可一键恢复`;
+          hint.textContent = `✅ Found backup data for ${backupData.length} categories. Reload the extension to restore with one click.`;
           document.getElementById('context-invalid').appendChild(hint);
         }
       } catch {}
@@ -188,10 +182,51 @@
     currentView = name;
   }
 
+  // --- Drag & Drop Handlers ---
+  function handleDragStart(e) {
+    draggedIndex = parseInt(e.currentTarget.dataset.index);
+    e.currentTarget.classList.add('dragging');
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+  }
+
+  function handleDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+
+    const targetIndex = parseInt(e.currentTarget.dataset.index);
+    if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+    // Reorder categories
+    const [removed] = categories.splice(draggedIndex, 1);
+    categories.splice(targetIndex, 0, removed);
+
+    // Reassign order values
+    categories.forEach((cat, i) => cat.order = i);
+
+    // Save and re-render
+    Storage.saveCategories(categories).then(() => {
+      renderCategoryList();
+    });
+  }
+
+  function handleDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    draggedIndex = null;
+  }
+
   function bindEvents() {
     document.getElementById('btn-add-category').addEventListener('click', () => {
       editingCategoryId = null;
-      document.getElementById('edit-category-title').textContent = '新建分类';
+      document.getElementById('edit-category-title').textContent = 'New Category';
       document.getElementById('input-category-name').value = '';
       document.getElementById('btn-delete-category').classList.add('hidden');
       renderColorPicker();
@@ -227,15 +262,17 @@
     list.innerHTML = '';
 
     if (categories.length === 0) {
-      list.innerHTML = '<p class="empty-hint">还没有分类，点击"+ 新建"创建第一个分类</p>';
+      list.innerHTML = '<p class="empty-hint">No categories yet. Click "+ New" to create your first one</p>';
       return;
     }
 
-    categories.sort((a, b) => a.order - b.order).forEach(cat => {
+    categories.sort((a, b) => a.order - b.order).forEach((cat, sortedIndex) => {
       const item = document.createElement('div');
       item.className = 'category-item';
+      item.draggable = true;
+      item.dataset.index = sortedIndex;
 
-      // 统计个人和公司数量
+      // Count members
       const personCount = cat.members.filter(m => m.profilePath?.startsWith('/in/')).length;
       const orgCount = cat.members.filter(m =>
         m.profilePath?.startsWith('/company/') || m.profilePath?.startsWith('/school/')
@@ -243,17 +280,18 @@
 
       let countText = '';
       if (orgCount === 0) {
-        countText = `${personCount} 人`;
+        countText = `${personCount} people`;
       } else if (personCount === 0) {
-        countText = `${orgCount} 公司`;
+        countText = `${orgCount} orgs`;
       } else {
-        countText = `${orgCount} 公司 · ${personCount} 人`;
+        countText = `${orgCount} orgs · ${personCount} people`;
       }
 
       const icon = cat.icon || DEFAULT_ICONS[categories.indexOf(cat) % DEFAULT_ICONS.length];
       const totalCount = cat.members.length;
 
       item.innerHTML = `
+        <div class="drag-handle">⋮⋮</div>
         <div class="category-icon" style="background: linear-gradient(135deg, ${cat.color}20, ${cat.color}10)">${icon}</div>
         <div class="category-info">
           <span class="category-name">${cat.name}</span>
@@ -261,7 +299,21 @@
         </div>
         <span class="category-badge">${totalCount}</span>
       `;
-      item.addEventListener('click', () => openCategoryDetail(cat.id));
+
+      // Drag events
+      item.addEventListener('dragstart', handleDragStart);
+      item.addEventListener('dragover', handleDragOver);
+      item.addEventListener('dragleave', handleDragLeave);
+      item.addEventListener('drop', handleDrop);
+      item.addEventListener('dragend', handleDragEnd);
+
+      item.addEventListener('click', (e) => {
+        // Don't open detail if clicking the drag handle
+        if (!e.target.closest('.drag-handle')) {
+          openCategoryDetail(cat.id);
+        }
+      });
+
       list.appendChild(item);
     });
   }
@@ -270,7 +322,7 @@
   function openEditCategory(catId) {
     const cat = categories.find(c => c.id === catId);
     editingCategoryId = catId;
-    document.getElementById('edit-category-title').textContent = cat ? '编辑分类' : '新建分类';
+    document.getElementById('edit-category-title').textContent = cat ? 'Edit Category' : 'New Category';
     document.getElementById('input-category-name').value = cat ? cat.name : '';
     document.getElementById('input-category-icon').value = cat ? (cat.icon || '') : '';
     document.getElementById('btn-delete-category').classList.toggle('hidden', !cat);
@@ -360,7 +412,7 @@
     list.innerHTML = '';
 
     if (cat.members.length === 0) {
-      list.innerHTML = '<p class="empty-hint">暂无成员</p>';
+      list.innerHTML = '<p class="empty-hint">No members yet</p>';
       return;
     }
 
@@ -379,13 +431,11 @@
       const initial = (displayName || '?').charAt(0).toUpperCase();
       const avatarColor = isOrg ? '#34C759' : '#007AFF';
       const profileUrl = `https://www.linkedin.com${member.profilePath}`;
-      // 提取链接缩写（只显示最后一段）
       const shortLink = member.profilePath ? member.profilePath.split('/').pop() : '';
 
       const item = document.createElement('div');
       item.className = 'member-item';
 
-      // 头像渲染：优先使用存储的真实头像，兜底为首字母
       const avatarHtml = member.avatar
         ? `<img class="member-avatar-img" src="${member.avatar}" alt="${displayName}" />`
         : `<div class="member-avatar" style="background: ${avatarColor}">${initial}</div>`;
@@ -396,7 +446,7 @@
           <span class="member-name">${displayName}</span>
           <a class="member-profile-link" href="${profileUrl}" target="_blank" rel="noopener">${shortLink}</a>
         </div>
-        <button class="btn btn-text btn-remove" data-idx="${idx}">移除</button>
+        <button class="btn btn-text btn-remove" data-idx="${idx}">Remove</button>
       `;
       item.querySelector('.btn-remove').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -454,18 +504,18 @@
     statusEl.classList.remove('hidden');
     suggestionsEl.innerHTML = '';
     confirmBtn.classList.add('hidden');
-    statusText.textContent = '正在提取关注列表...';
+    statusText.textContent = 'Extracting following list...';
 
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       const result = await chrome.tabs.sendMessage(tab.id, { type: 'extractFollowing' });
 
       if (!result || !result.length) {
-        statusText.textContent = '未能提取关注列表。请在 LinkedIn 页面上使用。';
+        statusText.textContent = 'Failed to extract following list. Please use on a LinkedIn page.';
         return;
       }
 
-      statusText.textContent = `已提取 ${result.length} 人，正在 AI 分析...`;
+      statusText.textContent = `Extracted ${result.length} people, AI analyzing...`;
 
       const response = await chrome.runtime.sendMessage({
         type: 'callClaudeAPI',
@@ -473,7 +523,7 @@
       });
 
       if (!response || response.error) {
-        statusText.textContent = '分析失败：' + (response?.error || '未知错误');
+        statusText.textContent = 'Analysis failed: ' + (response?.error || 'Unknown error');
         return;
       }
 
@@ -482,7 +532,7 @@
       renderAISuggestions(aiSuggestions);
       confirmBtn.classList.remove('hidden');
     } catch (err) {
-      statusText.textContent = '发生错误：' + err.message;
+      statusText.textContent = 'Error: ' + err.message;
     }
   }
 
@@ -496,7 +546,7 @@
       section.innerHTML = `
         <div class="ai-group-header">
           <input type="text" class="ai-group-name" value="${group.name}" data-gi="${gi}" />
-          <span class="ai-group-count">${group.members.length} 人</span>
+          <span class="ai-group-count">${group.members.length} people</span>
         </div>
       `;
 
@@ -573,7 +623,7 @@
     const belongsEl = document.getElementById('qa-belongs');
     if (belongsTo.length > 0) {
       belongsEl.classList.remove('hidden');
-      belongsEl.querySelector('span').textContent = belongsTo.map(c => c.name).join('、');
+      belongsEl.querySelector('span').textContent = belongsTo.map(c => c.name).join(', ');
     } else {
       belongsEl.classList.add('hidden');
     }
@@ -589,11 +639,10 @@
       item.innerHTML = `
         <div class="category-icon" style="background: linear-gradient(135deg, ${cat.color}20, ${cat.color}10)">${icon}</div>
         <span class="category-name">${cat.name}</span>
-        <span class="qa-status">${isMember ? '✓ 已添加' : '+ 添加'}</span>
+        <span class="qa-status">${isMember ? '✓ Added' : '+ Add'}</span>
       `;
       if (!isMember) {
         item.addEventListener('click', async () => {
-          // 保存时自动获取ID
           let linkedinId = null;
           try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -611,10 +660,10 @@
 
     const newBtn = document.createElement('div');
     newBtn.className = 'category-item qa-new';
-    newBtn.innerHTML = '<span class="category-name">+ 新建分类并添加</span>';
+    newBtn.innerHTML = '<span class="category-name">+ New Category & Add</span>';
     newBtn.addEventListener('click', () => {
       editingCategoryId = null;
-      document.getElementById('edit-category-title').textContent = '新建分类';
+      document.getElementById('edit-category-title').textContent = 'New Category';
       document.getElementById('input-category-name').value = '';
       document.getElementById('btn-delete-category').classList.add('hidden');
       renderColorPicker();

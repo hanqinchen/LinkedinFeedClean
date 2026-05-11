@@ -230,6 +230,30 @@ body {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
+/* Drag & Drop Styles */
+.drag-handle {
+  cursor: grab;
+  color: #c7c7cc;
+  font-size: 12px;
+  padding: 0 4px;
+  user-select: none;
+  letter-spacing: -2px;
+}
+
+.drag-handle:hover {
+  color: #86868b;
+}
+
+.category-item.dragging {
+  opacity: 0.5;
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.category-item.drag-over {
+  border-top: 2px solid #007AFF !important;
+}
+
 .category-icon {
   width: 44px;
   height: 44px;
